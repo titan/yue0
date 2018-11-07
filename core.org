@@ -1,0 +1,38 @@
+#+TITLE: The yue0 language
+#+AUTHOR: Titan
+#+EMAIL: howay.tan@gmail.com
+#+DATE: <2018-09-10 Mon>
+#+KEYWORDS: lisp, c, translator
+#+OPTIONS: H:4 toc:t
+#+STARTUP: indent
+
+正如一千个人眼中有一千零一个一样，一千个 Lisper 眼里有一千零一个 Lisp
+实现。每个 Lisper 都试图找到最喜欢的 Lisp。在我眼里，Lisp 应该是这样的：
+
+1. 编写容易。
+
+2. 没有垃圾回收。没有垃圾回收，才有可能用于实时操作系统。
+
+3. 没有运行时库。
+
+4. 静态类型。
+
+5. 容易集成 C 语言的库。
+
+* 基本框架
+#+begin_src python :tangle ${BUILDDIR}/yue0.py
+  #! /usr/bin/python
+  from typing import List
+  def main(src):
+    import parser
+    root = parser.load(src)
+    print(root)
+
+
+  if __name__ == '__main__':
+    import sys
+    if len(sys.argv) != 2:
+      print('Usage: yue0.py src')
+    else:
+      main(sys.argv[1])
+#+end_src

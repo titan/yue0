@@ -1,0 +1,732 @@
+#+STARTUP: indent
+
+* AST
+** 模块文件
+#+begin_src python :tangle ${BUILDDIR}/yast.py
+  from typing import List
+  <<ast-node>>
+  <<ast-char>>
+  <<ast-string>>
+  <<ast-int>>
+  <<ast-real>>
+  <<ast-identifier>>
+  <<ast-symbol>>
+  <<ast-key>>
+  <<ast-expression>>
+  <<ast-vector>>
+  <<ast-binding>>
+  <<ast-formal>>
+  <<ast-let>>
+  <<ast-if>>
+  <<ast-cond>>
+  <<ast-case>>
+  <<ast-fun>>
+  <<ast-lambda>>
+#+end_src
+** 基本 Node
+#+begin_src python :noweb-ref ast-node
+  class Node:
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      self.filename = filename
+      self.start = start
+      self.stop = stop
+      self.line = line
+      self.col = col
+      self.text = None
+#+end_src
+** Char
+#+begin_src python :noweb-ref ast-char
+  class Char(Node):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, value: chr):
+      super().__init__(filename, start, stop, line, col)
+      self.value = value
+#+end_src
+** String
+#+begin_src python :noweb-ref ast-string
+  class Str(Node):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, value: str):
+      super().__init__(filename, start, stop, line, col)
+      self.value = value
+#+end_src
+** Int
+#+begin_src python :noweb-ref ast-int
+  class Int(Node):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, value: int):
+      super().__init__(filename, start, stop, line, col)
+      self.value = value
+#+end_src
+** Real
+#+begin_src python :noweb-ref ast-real
+  class Real(Node):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, value: float):
+      super().__init__(filename, start, stop, line, col)
+      self.value = value
+#+end_src
+** Identifier
+#+begin_src python :noweb-ref ast-identifier
+  class Identifier(Node):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, name: str):
+      super().__init__(filename, start, stop, line, col)
+      self.name = name
+#+end_src
+** Symbol
+#+begin_src python :noweb-ref ast-symbol
+  class Symbol(Identifier):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, name: str):
+      super().__init__(filename, start, stop, line, col, name)
+#+end_src
+** Key
+#+begin_src python :noweb-ref ast-key
+  class Key(Identifier):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, name: str):
+      super().__init__(filename, start, stop, line, col, name)
+#+end_src
+** Expression
+#+begin_src python :noweb-ref ast-expression
+  class Expression(Node):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      super().__init__(filename, start, stop, line, col)
+#+end_src
+** Vector
+#+begin_src python :noweb-ref ast-vector
+  class Vector(Node):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, elements: List[Node]):
+      super().__init__(filename, start, stop, line, col)
+      self.elements = elements
+#+end_src
+** Binding
+#+begin_src python :noweb-ref ast-binding
+  class Binding(Node):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      super().__init__(filename, start, stop, line, col)
+      self.var = None
+      self.expression = None
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, var: Symbol, expression: Node):
+      super().__init__(filename, start, stop, line, col)
+      self.var = var
+      self.expression = expression
+#+end_src
+** Formal
+#+begin_src python :noweb-ref ast-formal
+  class Formal(Node):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      super().__init__(filename, start, stop, line, col)
+      self.key = None
+      self.type = None
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, key: Key, type: Symbol):
+      super().__init__(filename, start, stop, line, col)
+      self.key = key
+      self.type = type
+#+end_src
+** Let
+#+begin_src python :noweb-ref ast-let
+  class Let(Expression):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      super().__init__(filename, start, stop, line, col)
+      self.bindings = []
+      self.body = None
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, bindings: List[Binding], body: Expression):
+      super().__init__(filename, start, stop, line, col)
+      self.bindings = bindings
+      self.body = body
+#+end_src
+** If
+#+begin_src python :noweb-ref ast-if
+  class If(Expression):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      super().__init__(filename, start, stop, line, col)
+      self.test = None
+      self.consquent = None
+      self.alternate = None
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, test: Node, consequent: Node, alternate: Node):
+      super().__init__(filename, start, stop, line, col)
+      self.test = test
+      self.consequent = consequent
+      self.alternate = alternate
+#+end_src
+** Cond
+#+begin_src python :noweb-ref ast-cond
+  class CondClause(Node):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      super().__init__(filename, start, stop, line, col)
+      self.test = None
+      self.sequence = None
+
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, test: Expression, sequence: Expression):
+      super().__init__(filename, start, stop, line, col)
+      self.test = test
+      self.sequence = sequence
+
+  class Cond(Expression):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      super().__init__(filename, start, stop, line, col)
+      self.clauses = []
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, clauses: List[CondClause]):
+      super().__init__(filename, start, stop, line, col)
+      self.clauses = clauses
+#+end_src
+** Case
+#+begin_src python :noweb-ref ast-case
+  class CaseClause(Node):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      super().__init__(filename, start, stop, line, col)
+      self.datum = None
+      self.sequence = None
+
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, datum: Node, sequence: Expression):
+      super().__init__(filename, start, stop, line, col)
+      self.datum = datum
+      self.sequence = sequence
+
+  class Case(Expression):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      super().__init__(filename, start, stop, line, col)
+      self.clauses = []
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, clauses: List[CaseClause]):
+      super().__init__(filename, start, stop, line, col)
+      self.clauses = clauses
+#+end_src
+** Fun
+#+begin_src python :noweb-ref ast-fun
+  class Fun(Expression):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      super().__init__(filename, start, stop, line, col)
+      self.name = None
+      self.formals = []
+      self.body = []
+
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, name: Symbol, formals: List[Formal], body: Expression):
+      super().__init__(filename, start, stop, line, col)
+      self.name = name
+      self.formals = formals
+      self.body = body
+#+end_src
+** Lambda
+#+begin_src python :noweb-ref ast-lambda
+  class Lambda(Expression):
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int):
+      super().__init__(filename, start, stop, line, col)
+      self.formals = []
+      self.body = []
+
+    def __init__(self, filename: str, start: int, stop: int, line: int, col: int, formals: List[Formal], body: Expression):
+      super().__init__(filename, start, stop, line, col)
+      self.formals = formals
+      self.body = body
+#+end_src
+* 词法分析
+词法分析器把源文件解析成对应的各种 Datum。
+** lex context
+#+begin_src python :noweb-ref lexer-context
+  class LexContext:
+    def __init__(self):
+      self.buffer = ''
+      self.input = ''
+      self.filename = ''
+      self.line = 0
+      self.col = 0
+      self.ptr = 0
+      self.errors = []
+
+    def append(self, ch: chr):
+      self.buffer += ch
+
+    def clear(self):
+      self.buffer = ''
+      self.input = ''
+#+end_src
+** lex event
+#+begin_src python :noweb-ref lexer-event
+  def lexer(src: str, content: str):
+    from lex_fsm import Event, State, FSM
+    fsm = FSM(lex_action)
+    syntaxctx = SyntaxContext()
+    lexctx = LexContext()
+    lexctx.filename = src
+    ctx = (lexctx, syntaxctx)
+    lexctx.line = 1
+    lexctx.col = 0
+    for ch in content:
+      lexctx.input = ch
+      if ch == '(':
+        fsm.process(Event.OPEN_PARENTHESIS, ctx)
+      elif ch == ')':
+        fsm.process(Event.CLOSE_PARENTHESIS, ctx)
+      elif ch == '[':
+        fsm.process(Event.OPEN_BRACKET, ctx)
+      elif ch == ']':
+        fsm.process(Event.CLOSE_BRACKET, ctx)
+      elif ch == '{':
+        fsm.process(Event.OPEN_BRACE, ctx)
+      elif ch == '}':
+        fsm.process(Event.CLOSE_BRACE, ctx)
+      elif ch == '.':
+        fsm.process(Event.DOT, ctx)
+      elif ch == ':':
+        fsm.process(Event.COLON, ctx)
+      elif ch == ';':
+        fsm.process(Event.SEMI_COLON, ctx)
+      elif ch == '"':
+        fsm.process(Event.DOUBLE_QUOTES, ctx)
+      elif ch == '\'':
+        fsm.process(Event.QUOTES, ctx)
+      elif ch == ',':
+        fsm.process(Event.COMMA, ctx)
+      elif ch == '%':
+        fsm.process(Event.PERCENT, ctx)
+      elif ch == '\\':
+        fsm.process(Event.BACKSLASH, ctx)
+      elif ch == 'a':
+        fsm.process(Event.A, ctx)
+      elif ch == 'b':
+        fsm.process(Event.B, ctx)
+      elif ch == 'c':
+        fsm.process(Event.C, ctx)
+      elif ch == 'd':
+        fsm.process(Event.D, ctx)
+      elif ch == 'e':
+        fsm.process(Event.E, ctx)
+      elif ch == 'f':
+        fsm.process(Event.F, ctx)
+      elif ch == 'n':
+        fsm.process(Event.N, ctx)
+      elif ch == 'r':
+        fsm.process(Event.R, ctx)
+      elif ch == 't':
+        fsm.process(Event.T, ctx)
+      elif ch == 'v':
+        fsm.process(Event.V, ctx)
+      elif ch == 'x':
+        fsm.process(Event.X, ctx)
+      elif ch == '0':
+        fsm.process(Event.NUMBER_0, ctx)
+      elif ch == '1':
+        fsm.process(Event.NUMBER_1, ctx)
+      elif ch == '2':
+        fsm.process(Event.NUMBER_2, ctx)
+      elif ch == '3':
+        fsm.process(Event.NUMBER_3, ctx)
+      elif ch == '4':
+        fsm.process(Event.NUMBER_4, ctx)
+      elif ch == '5':
+        fsm.process(Event.NUMBER_5, ctx)
+      elif ch == '6':
+        fsm.process(Event.NUMBER_6, ctx)
+      elif ch == '7':
+        fsm.process(Event.NUMBER_7, ctx)
+      elif ch == '8':
+        fsm.process(Event.NUMBER_8, ctx)
+      elif ch == '9':
+        fsm.process(Event.NUMBER_9, ctx)
+      elif ch == ' ':
+        fsm.process(Event.SPACE, ctx)
+      elif ch == '\t':
+        fsm.process(Event.TAB, ctx)
+      elif ch == '\r':
+        fsm.process(Event.CR, ctx)
+      elif ch == '\n':
+        fsm.process(Event.LF, ctx)
+      else:
+        fsm.process(Event.OTHER_CHAR, ctx)
+      if ch == '\n':
+        lexctx.line += 1
+        lexctx.col = 1
+    fsm.process(Event.EOF, ctx)
+    return syntaxctx.node
+
+#+end_src
+
+** lex action
+
+#+begin_src python :noweb-ref lexer-action
+  def process_token(lexctx, syntaxctx):
+    from syntax_fsm import Event, State, FSM
+    global syntaxfsm
+    if lexctx.buffer == 'if':
+      syntaxctx.node = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col)
+      syntaxfsm.process(Event.IF, syntaxctx)
+    elif lexctx.buffer == 'cond':
+      syntaxctx.node = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col)
+      syntaxfsm.process(Event.COND, syntaxctx)
+    elif lexctx.buffer == 'case':
+      syntaxctx.node = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col)
+      syntaxfsm.process(Event.CASE, syntaxctx)
+    elif lexctx.buffer == 'else':
+      syntaxctx.node = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col)
+      syntaxfsm.process(Event.ELSE, syntaxctx)
+    elif lexctx.buffer == 'let':
+      syntaxctx.node = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col)
+      syntaxfsm.process(Event.LET, syntaxctx)
+    elif lexctx.buffer == 'do':
+      syntaxctx.node = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col)
+      syntaxfsm.process(Event.DO, syntaxctx)
+    elif lexctx.buffer == 'defn':
+      syntaxctx.node = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col)
+      syntaxfsm.process(Event.DEFN, syntaxctx)
+    elif lexctx.buffer == 'fn':
+      syntaxctx.node = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col)
+      syntaxfsm.process(Event.FN, syntaxctx)
+    elif lexctx.buffer == '->':
+      syntaxctx.node = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col)
+      syntaxfsm.process(Event.ARROW, syntaxctx)
+    elif lexctx.buffer.endswith(':'):
+      syntaxctx.node = Key(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, lexctx.buffer)
+      syntaxfsm.process(Event.KEYWORD, syntaxctx)
+    else:
+      syntaxctx.node = Symbol(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, lexctx.buffer)
+      syntaxfsm.process(Event.SYMBOL, syntaxctx)
+
+  def lex_action(action, data):
+    from syntax_fsm import Event, State, FSM
+    from lex_fsm import Action
+    global syntaxfsm
+    lexctx = data[0]
+    syntaxctx = data[1]
+    if action == Action.OPEN_PARENTHESIS:
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '('
+      syntaxfsm.process(Event.OPEN_PARENTHESIS, syntaxctx)
+    elif action == Action.CLOSE_PARENTHESIS:
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ')'
+      syntaxfsm.process(Event.CLOSE_PARENTHESIS, syntaxctx)
+    elif action == Action.OPEN_BRACKET:
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '['
+      syntaxfsm.process(Event.OPEN_BRACKET, syntaxctx)
+    elif action == Action.CLOSE_BRACKET:
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ']'
+      syntaxfsm.process(Event.CLOSE_BRACKET, syntaxctx)
+    elif action == Action.OPEN_BRACE:
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '{'
+      syntaxfsm.process(Event.OPEN_BRACE, syntaxctx)
+    elif action == Action.CLOSE_BRACE:
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '}'
+      syntaxfsm.process(Event.CLOSE_BRACE, syntaxctx)
+    elif action == Action.APPEND:
+      lexctx.append(lexctx.input)
+    elif action == Action.TOKEN_NEWLINE_OPEN_PARENTHESIS:
+      process_token(lexctx, syntaxctx)
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '('
+      syntaxfsm.process(Event.OPEN_PARENTHESIS, syntaxctx)
+    elif action == Action.TOKEN_NEWLINE_CLOSE_PARENTHESIS:
+      process_token(lexctx, syntaxctx)
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ')'
+      syntaxfsm.process(Event.CLOSE_PARENTHESIS, syntaxctx)
+    elif action == Action.TOKEN_NEWLINE_OPEN_BRACKET:
+      process_token(lexctx, syntaxctx)
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '['
+      syntaxfsm.process(Event.OPEN_BRACKET, syntaxctx)
+    elif action == Action.TOKEN_NEWLINE_CLOSE_BRACKET:
+      process_token(lexctx, syntaxctx)
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ']'
+      syntaxfsm.process(Event.CLOSE_BRACKET, syntaxctx)
+    elif action == Action.TOKEN_NEWLINE_OPEN_BRACE:
+      process_token(lexctx, syntaxctx)
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '{'
+      syntaxfsm.process(Event.OPEN_BRACE, syntaxctx)
+    elif action == Action.TOKEN_NEWLINE_CLOSE_BRACE:
+      process_token(lexctx, syntaxctx)
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '}'
+      syntaxfsm.process(Event.CLOSE_BRACE, syntaxctx)
+    elif action == Action.TOKEN:
+      process_token(lexctx, syntaxctx)
+    elif action == Action.ZERO_NEWLINE_OPEN_PARENTHESIS:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col, 0)
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '('
+      syntaxfsm.process(Event.OPEN_PARENTHESIS, syntaxctx)
+    elif action == Action.ZERO_NEWLINE_CLOSE_PARENTHESIS:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col, 0)
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ')'
+      syntaxfsm.process(Event.CLOSE_PARENTHESIS, syntaxctx)
+    elif action == Action.ZERO_NEWLINE_OPEN_BRACKET:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col, 0)
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '['
+      syntaxfsm.process(Event.OPEN_BRACKET, syntaxctx)
+    elif action == Action.ZERO_NEWLINE_CLOSE_BRACKET:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col, 0)
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ']'
+      syntaxfsm.process(Event.CLOSE_BRACKET, syntaxctx)
+    elif action == Action.ZERO_NEWLINE_OPEN_BRACE:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col, 0)
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '{'
+      syntaxfsm.process(Event.OPEN_BRACE, syntaxctx)
+    elif action == Action.ZERO_NEWLINE_CLOSE_BRACE:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col, 0)
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '}'
+      syntaxfsm.process(Event.CLOSE_BRACE, syntaxctx)
+    elif action == Action.APPEND_0_NEWLINE_APPEND:
+      lexctx.append('0')
+      lexctx.append(lexctx.input)
+    elif action == Action.ZERO_NEWLINE_APPEND:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col, 0)
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      lexctx.append(lexctx.input)
+    elif action == Action.ZERO:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col, 0)
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+    elif action == Action.INT_NEWLINE_OPEN_PARENTHESIS:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buffer))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '('
+      syntaxfsm.process(Event.OPEN_PARENTHESIS, syntaxctx)
+    elif action == Action.INT_NEWLINE_CLOSE_PARENTHESIS:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buffer))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ')'
+      syntaxfsm.process(Event.CLOSE_PARENTHESIS, syntaxctx)
+    elif action == Action.INT_NEWLINE_OPEN_BRACKET:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buffer))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '['
+      syntaxfsm.process(Event.OPEN_BRACKET, syntaxctx)
+    elif action == Action.INT_NEWLINE_CLOSE_BRACKET:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buffer))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ']'
+      syntaxfsm.process(Event.CLOSE_BRACKET, syntaxctx)
+    elif action == Action.INT_NEWLINE_OPEN_BRACE:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buffer))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '{'
+      syntaxfsm.process(Event.OPEN_BRACE, syntaxctx)
+    elif action == Action.INT_NEWLINE_CLOSE_BRACE:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buffer))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '}'
+      syntaxfsm.process(Event.CLOSE_BRACE, syntaxctx)
+    elif action == Action.INT_NEWLINE_APPEND:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buffer))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      lexctx.append(lexctx.input)
+    elif action == Action.INT:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buffer))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+    elif action == Action.HEX_NEWLINE_OPEN_PARENTHESIS:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buf, base = 16))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '('
+      syntaxfsm.process(Event.OPEN_PARENTHESIS, syntaxctx)
+    elif action == Action.HEX_NEWLINE_CLOSE_PARENTHESIS:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buf, base = 16))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ')'
+      syntaxfsm.process(Event.CLOSE_PARENTHESIS, syntaxctx)
+    elif action == Action.HEX_NEWLINE_OPEN_BRACKET:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buf, base = 16))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '['
+      syntaxfsm.process(Event.OPEN_BRACKET, syntaxctx)
+    elif action == Action.HEX_NEWLINE_CLOSE_BRACKET:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buf, base = 16))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ']'
+      syntaxfsm.process(Event.CLOSE_BRACKET, syntaxctx)
+    elif action == Action.HEX_NEWLINE_OPEN_BRACE:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buf, base = 16))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '{'
+      syntaxfsm.process(Event.OPEN_BRACE, syntaxctx)
+    elif action == Action.HEX_NEWLINE_CLOSE_BRACE:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buf, base = 16))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '{'
+      syntaxfsm.process(Event.CLOSE_BRACE, syntaxctx)
+    elif action == Action.HEX_ERROR:
+      lexctx.errors.add(ParsingError('Invalid hex: %s' % lexctx.buf, lexctx.filename, lexctx.line, lexctx.vol))
+    elif action == Action.HEX:
+      syntaxctx.node = Int(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, int(lexctx.buf, base = 16))
+      syntaxfsm.process(Event.INT, syntaxctx)
+      lexctx.clear()
+    elif action == Action.REAL_NEWLINE_OPEN_PARENTHESIS:
+      syntaxctx.node = Real(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, float(lexctx.buffer))
+      syntaxfsm.process(Event.REAL, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '('
+      syntaxfsm.process(Event.OPEN_PARENTHESIS, syntaxctx)
+    elif action == Action.REAL_NEWLINE_CLOSE_PARENTHESIS:
+      syntaxctx.node = Real(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, float(lexctx.buffer))
+      syntaxfsm.process(Event.REAL, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ')'
+      syntaxfsm.process(Event.CLOSE_PARENTHESIS, syntaxctx)
+    elif action == Action.REAL_NEWLINE_OPEN_BRACKET:
+      syntaxctx.node = Real(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, float(lexctx.buffer))
+      syntaxfsm.process(Event.REAL, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '['
+      syntaxfsm.process(Event.OPEN_BRACKET, syntaxctx)
+    elif action == Action.REAL_NEWLINE_CLOSE_BRACKET:
+      syntaxctx.node = Real(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, float(lexctx.buffer))
+      syntaxfsm.process(Event.REAL, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = ']'
+      syntaxfsm.process(Event.CLOSE_BRACKET, syntaxctx)
+    elif action == Action.REAL_NEWLINE_OPEN_BRACE:
+      syntaxctx.node = Real(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, float(lexctx.buffer))
+      syntaxfsm.process(Event.REAL, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '{'
+      syntaxfsm.process(Event.OPEN_BRACE, syntaxctx)
+    elif action == Action.REAL_NEWLINE_CLOSE_BRACE:
+      syntaxctx.node = Real(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, float(lexctx.buffer))
+      syntaxfsm.process(Event.REAL, syntaxctx)
+      lexctx.clear()
+      syntaxctx.delimier = Node(lexctx.filename, lexctx.ptr, lexctx.ptr + 1, lexctx.line, lexctx.col)
+      syntaxctx.delimier.text = '}'
+      syntaxfsm.process(Event.CLOSE_BRACE, syntaxctx)
+    elif action == Action.REAL_ERROR:
+      lexctx.errors.add(ParsingError('Invalid real: %s' % lexctx.buf, lexctx.filename, lexctx.line, lexctx.vol))
+    elif action == Action.REAL:
+      syntaxctx.node = Real(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, float(lexctx.buffer))
+      syntaxfsm.process(Event.REAL, syntaxctx)
+      lexctx.clear()
+    elif action == Action.EMPTY_CHAR:
+      syntaxctx.node = Real(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, lexctx.buffer)
+      syntaxfsm.process(Event.CHAR, syntaxctx)
+      lexctx.clear()
+    elif action == Action.CHAR_ERROR:
+      lexctx.errors.add(ParsingError('Invalid char: %s' % lexctx.buf, lexctx.filename, lexctx.line, lexctx.vol))
+    elif action == Action.CHAR:
+      syntaxctx.node = Real(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, lexctx.buffer)
+      syntaxfsm.process(Event.CHAR, syntaxctx)
+      lexctx.clear()
+    elif action == Action.ESCAPED_CHAR_ERROR:
+      lexctx.errors.add(ParsingError('Invalid escaped char: %s' % lexctx.buf, lexctx.filename, lexctx.line, lexctx.vol))
+    elif action == Action.ESCAPED_CHAR:
+      syntaxctx.node = Real(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, lexctx.buffer)
+      syntaxfsm.process(Event.CHAR, syntaxctx)
+      lexctx.clear()
+    elif action == Action.STRING:
+      syntaxctx.node = String(lexctx.filename, lexctx.ptr, lexctx.ptr + len(lexctx.buffer), lexctx.line, lexctx.col, lexctx.buffer)
+      syntaxfsm.process(Event.STRING, syntaxctx)
+      lexctx.clear()
+    elif action == Action.STRING_ERROR:
+      lexctx.errors.add(ParsingError('Invalid string: %s' % lexctx.buf, lexctx.filename, lexctx.line, lexctx.vol))
+    elif action == Action.ESCAPED_STRING_ERROR:
+      lexctx.errors.add(ParsingError('Invalid escaped string: %s' % lexctx.buf, lexctx.filename, lexctx.line, lexctx.vol))
+
+#+end_src
+
+* 语法分析
+语法分析器接收从词法分析器输出的各种 Datum，对语法进行检查，最终生成对
+应的 AST nodes。
+** syntax context
+#+begin_src python :noweb-ref syntax-context
+  class SyntaxContext:
+    from syntax_fsm import FSM
+    def __init__(self):
+      self.stack = []
+      self.delimimer = None
+      self.node = None
+
+    def push(self, fsm: FSM):
+      env = (self.delimier, self.node)
+      self.stack.append((env, fsm))
+
+    def pop(self):
+      (env, fsm) = self.stack.pop()
+      (self.delimier, self.node) = env
+      return fsm
+#+end_src
+** syntax action
+#+begin_src python :noweb-ref syntax-action
+  def syntax_action(action, data):
+    from syntax_fsm import Action, FSM
+    global syntaxfsm
+    syntaxctx = data
+    if action == Action.SET_DELIMIER_NEWLINE_PUSH_CTX:
+      syntaxctx.delimier = '('
+      syntaxctx.push(syntaxfsm)
+      syntaxfsm = syntax_fsm.FSM(syntax_action)
+#+end_src
+
+* 基本框架
+#+begin_src python :tangle ${BUILDDIR}/parser.py
+  from yast import *
+  import syntax_fsm
+
+  class ParsingError:
+    def __init__(self, message: str, filename: str, line: int, col: int):
+      self.message = message
+      self.filename = filename
+      self.line = line
+      self.col = col
+    def __str__(self):
+      return '%s (%d, %d): %s' % (self.filename, self.line, self.col, self.message)
+
+  <<syntax-context>>
+  <<syntax-action>>
+
+  <<lexer-context>>
+  <<lexer-action>>
+  <<lexer-event>>
+
+  syntaxfsm = syntax_fsm.FSM(syntax_action)
+
+  def load(src):
+    with open(src, 'r') as f:
+      content = f.read(-1)
+      root = lexer(src, content)
+      return root
+#+end_src
