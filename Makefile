@@ -23,10 +23,10 @@ $(PARSERSRC): parser.org | prebuild
 	sed 's/$$$\{BUILDDIR}/$(ESCAPED_BUILDDIR)/g' $< | org-tangle -
 
 $(LEXFSMSRC): lex-fsm.txt | prebuild
-	fsm-generator.py $< -d $(BUILDDIR) --prefix lex --style table --target python
+	fsm-generator.py $< -d $(BUILDDIR) --target python $(FSMFLAGS) $(LEXFSMFLAGS)
 
 $(SYNTAXFSMSRC): syntax-fsm.txt | prebuild
-	fsm-generator.py $< -d $(BUILDDIR) --prefix lex --style table --target python
+	fsm-generator.py $< -d $(BUILDDIR) --target python $(FSMFLAGS) $(SYNTAXFSMFLAGS)
 
 prebuild:
 ifeq "$(wildcard $(BUILDDIR))" ""

@@ -1,0 +1,4 @@
+BUILDDIR = ./build
+FSMFLAGS = --style table
+LEXFSMFLAGS = --prefix lex
+SYNTAXFSMFLAGS = --prefix syntax
